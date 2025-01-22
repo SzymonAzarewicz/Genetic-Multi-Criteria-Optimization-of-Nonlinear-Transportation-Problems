@@ -1,70 +1,66 @@
 import pygame
 import numpy as np
+import random
 
 # Inicjalizacja pygame
 pygame.init()
 
 # Ustawienia okna
-TILE_SIZE = 20  # Wielkość kwadratu (w pikselach)
-TILE_MARGIN = 1  # Margines między kwadratami
-MAP_SIZE = 30   # Nowy rozmiar mapy (30x30)
+TILE_SIZE = 20
+TILE_MARGIN = 1
+MAP_SIZE = 30
 WINDOW_SIZE = MAP_SIZE * (TILE_SIZE + TILE_MARGIN) - TILE_MARGIN
 screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
-pygame.display.set_caption("Mapa 2D - Połączone Ścieżki")
+pygame.display.set_caption("Mapa 2D - Wiele Losowych Ścieżek")
 
 # Kolory
-COLOR_GRASS = (34, 139, 34)  # Zielony (trawa)
-COLOR_ROAD = (128, 128, 128)  # Szary (droga)
-COLOR_START_END = (0, 0, 255)  # Niebieski (punkt startowy i końcowy)
+COLOR_GRASS = (34, 139, 34)
+COLOR_ROAD = (128, 128, 128)
+COLOR_START_END = (0, 0, 255)
 
-# Tworzenie macierzy mapy: 0 - trawa, 1 - droga
+# Tworzenie pustej mapy
 map_grid = np.zeros((MAP_SIZE, MAP_SIZE), dtype=int)
 
-def generate_connected_paths(map_grid):
-    # Punkt startowy (środek dolnej krawędzi mapy)
-    start_x = MAP_SIZE // 2
-    start_y = MAP_SIZE - 1
+# Funkcja do generowania ścieżek
+def generate_paths(num_paths):
+    paths = []  # Lista przechowująca wszystkie ścieżki
+    start_position = MAP_SIZE // 2  # Wspólny początek
+    end_position = MAP_SIZE // 2    # Wspólny koniec
 
-    # Punkt końcowy (środek górnej krawędzi mapy)
-    end_x = MAP_SIZE // 2
-    end_y = 0
+    # Oznacz początek mapy
+    map_grid[MAP_SIZE - 1, start_position] = 2
 
-    # Lista punktów startowych dla rozgałęzień
-    connections = [(start_x, start_y), (end_x, end_y)]
+    for path_idx in range(num_paths):
+        path = []  # Lista pozycji dla bieżącej ścieżki
+        current_x = start_position
+        current_y = MAP_SIZE - 1
 
-    def add_path(x, y, target_x, target_y):
-        while x != target_x or y != target_y:
-            map_grid[y, x] = 1  # Ustaw ścieżkę
-            if x < target_x:
-                x += 1
-            elif x > target_x:
-                x -= 1
-            elif y < target_y:
-                y += 1
-            elif y > target_y:
-                y -= 1
+        while current_y > 0:
+            # Dodaj aktualną pozycję do ścieżki
+            path.append((current_y, current_x))
+            map_grid[current_y, current_x] = 1
 
-    # Tworzenie głównej ścieżki
-    add_path(start_x, start_y, end_x, end_y)
+            # Losowy ruch w pionie lub poziomie
+            direction = random.choice(["up", "left", "right"])
+            if direction == "up" and current_y > 0:
+                current_y -= 1
+            elif direction == "left" and current_x > 1 and map_grid[current_y, current_x - 1] != 1:
+                current_x -= 1
+            elif direction == "right" and current_x < MAP_SIZE - 2 and map_grid[current_y, current_x + 1] != 1:
+                current_x += 1
 
-    # Tworzenie rozgałęzień i łączenie ich z innymi ścieżkami
-    for _ in range(5):  # Liczba rozgałęzień
-        branch_x = np.random.randint(1, MAP_SIZE - 1)
-        branch_y = np.random.randint(1, MAP_SIZE - 1)
-        target_x, target_y = connections[np.random.randint(len(connections))]
-        add_path(branch_x, branch_y, target_x, target_y)
-        connections.append((branch_x, branch_y))
+        # Dodaj końcowy punkt ścieżki
+        path.append((0, end_position))
+        map_grid[0, end_position] = 2
 
-    # Łączenie pozostałych punktów
-    for i in range(len(connections)):
-        for j in range(i + 1, len(connections)):
-            if np.random.rand() > 0.5:  # Losowe połączenia
-                add_path(connections[i][0], connections[i][1], connections[j][0], connections[j][1])
+        # Zapisz ścieżkę
+        paths.append(path)
 
-    return map_grid, start_x, start_y, end_x, end_y
+    return paths
 
-# Generowanie połączonych dróg
-map_grid, start_x, start_y, end_x, end_y = generate_connected_paths(map_grid)
+# Generowanie ścieżek
+num_paths = 3  # Liczba ścieżek
+paths = generate_paths(num_paths)
 
 # Główna pętla gry
 running = True
@@ -74,26 +70,30 @@ while running:
             running = False
 
     # Rysowanie mapy
-    screen.fill((0, 0, 0))  # Czarny kolor tła
+    screen.fill((0, 0, 0))
     for i in range(MAP_SIZE):
         for j in range(MAP_SIZE):
-            if (j, i) == (start_x, start_y) or (j, i) == (end_x, end_y):
-                color = COLOR_START_END  # Niebieski dla punktu startowego i końcowego
-            else:
-                color = COLOR_GRASS if map_grid[i, j] == 0 else COLOR_ROAD
+            if map_grid[i, j] == 0:
+                color = COLOR_GRASS
+            elif map_grid[i, j] == 1:
+                color = COLOR_ROAD
+            elif map_grid[i, j] == 2:
+                color = COLOR_START_END
             pygame.draw.rect(
                 screen,
                 color,
                 (
-                    j * (TILE_SIZE + TILE_MARGIN),  # Pozycja X z marginesem
-                    i * (TILE_SIZE + TILE_MARGIN),  # Pozycja Y z marginesem
-                    TILE_SIZE,                      # Szerokość kwadratu
-                    TILE_SIZE                       # Wysokość kwadratu
+                    j * (TILE_SIZE + TILE_MARGIN),
+                    i * (TILE_SIZE + TILE_MARGIN),
+                    TILE_SIZE,
+                    TILE_SIZE
                 )
             )
-
-    # Aktualizacja ekranu
     pygame.display.flip()
+
+# Wyświetlanie wygenerowanych ścieżek
+for idx, path in enumerate(paths):
+    print(f"Ścieżka {idx + 1}: {path}")
 
 # Zamykanie pygame
 pygame.quit()
