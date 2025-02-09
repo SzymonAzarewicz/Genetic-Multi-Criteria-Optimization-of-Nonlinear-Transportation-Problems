@@ -211,51 +211,17 @@ class Wizualizacja:
                     koniec_pos = self.pozycje[sasiad_id]
                     
                     # Znajdujemy punkty pośrednie
-                    punkty_posrednie = self._znajdz_punkty_posrednie(start_pos, koniec_pos)
-                    
-                    # Jeśli są punkty pośrednie, rysujemy odcinki przez nie
-                    if punkty_posrednie:
-                        # Tworzymy listę wszystkich punktów w kolejności
-                        wszystkie_punkty = [(punkt.id, start_pos)] + \
-                                        punkty_posrednie + \
-                                        [(sasiad_id, koniec_pos)]
+                   
+                    myszka_na_sciezce = self._czy_myszka_na_sciezce(start_pos, koniec_pos, pozycja_myszy)
+                    kolor = (50, 50, 200) if myszka_na_sciezce else (100, 100, 100)
+                    grubosc = 3 if myszka_na_sciezce else 2
+                    pygame.draw.line(self.ekran, kolor, start_pos, koniec_pos, grubosc)
                         
-                        # Rysujemy odcinki między kolejnymi punktami
-                        for i in range(len(wszystkie_punkty) - 1):
-                            p1 = wszystkie_punkty[i]
-                            p2 = wszystkie_punkty[i + 1]
-                            
-                            # Obliczamy część kosztu proporcjonalną do długości odcinka
-                            odleglosc_calkowita = math.dist(start_pos, koniec_pos)
-                            odleglosc_odcinka = math.dist(p1[1], p2[1])
-                            koszt_odcinka = int(koszt * odleglosc_odcinka / odleglosc_calkowita)
-                            
-                            # Sprawdzamy czy myszka jest na tym odcinku
-                            myszka_na_sciezce = self._czy_myszka_na_sciezce(p1[1], p2[1], pozycja_myszy)
-                            
-                            # Rysujemy odcinek
-                            kolor = (50, 50, 200) if myszka_na_sciezce else (100, 100, 100)
-                            grubosc = 3 if myszka_na_sciezce else 2
-                            pygame.draw.line(self.ekran, kolor, p1[1], p2[1], grubosc)
-                            
-                            # Wyświetlamy koszt odcinka
-                            if myszka_na_sciezce:
-                                srodek_x = (p1[1][0] + p2[1][0]) // 2
-                                srodek_y = (p1[1][1] + p2[1][1]) // 2
-                                tekst = self.czcionka.render(str(koszt_odcinka), True, (0, 0, 0))
-                                self.ekran.blit(tekst, (srodek_x, srodek_y))
-                    
-                    else:  # Jeśli nie ma punktów pośrednich, rysujemy jak wcześniej
-                        myszka_na_sciezce = self._czy_myszka_na_sciezce(start_pos, koniec_pos, pozycja_myszy)
-                        kolor = (50, 50, 200) if myszka_na_sciezce else (100, 100, 100)
-                        grubosc = 3 if myszka_na_sciezce else 2
-                        pygame.draw.line(self.ekran, kolor, start_pos, koniec_pos, grubosc)
-                        
-                        if myszka_na_sciezce:
-                            srodek_x = (start_pos[0] + koniec_pos[0]) // 2
-                            srodek_y = (start_pos[1] + koniec_pos[1]) // 2
-                            tekst = self.czcionka.render(str(koszt), True, (0, 0, 0))
-                            self.ekran.blit(tekst, (srodek_x, srodek_y))
+                    if myszka_na_sciezce:
+                        srodek_x = (start_pos[0] + koniec_pos[0]) // 2
+                        srodek_y = (start_pos[1] + koniec_pos[1]) // 2
+                        tekst = self.czcionka.render(str(koszt), True, (0, 0, 0))
+                        self.ekran.blit(tekst, (srodek_x, srodek_y))
 
     def uruchom(self):
         running = True
