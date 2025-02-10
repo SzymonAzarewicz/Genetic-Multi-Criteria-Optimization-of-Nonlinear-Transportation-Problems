@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import pickle
 
 # Inicjalizacja pygame
 pygame.init()
@@ -32,6 +33,9 @@ class Point:
         # Lista sąsiadów – każdy element to krotka: (neighbor_index, delay_factor, route_length_in_meters)
         self.neighbors = []  
 
+    def __repr__(self):
+            return (f"Point(x={self.x}, y={self.y}, index={self.index}, special={self.special}, "f"jam_index={self.jam_index}, has_packages={self.has_packages}, neighbors={self.neighbors})")
+    
     def get_position(self):
         return (self.x, self.y)
 
@@ -347,6 +351,80 @@ class Game:
             coefficient = avg_jam * factor
             print(f"Z {idx1} do {idx2}, factor: {factor:.2f}, długość: {stored_length:.2f} m, "
                   f"współczynnik: {coefficient:.2f}")
+    
+    def load_paths_from_pickle(self, filename="populacja.pkl"):
+        """
+        Odczytuje wszystkie ścieżki z pliku pickle.
+        
+        Args:
+            filename (str): Nazwa pliku z ścieżkami
+        
+        Returns:
+            list: Lista ścieżek (tras), gdzie każda ścieżka to lista liczb całkowitych
+        """
+        try:
+            with open(filename, 'rb') as f:
+                data = pickle.load(f)
+                
+                # Sprawdzamy strukturę danych:
+                # 1. Jeśli plik zawiera słownik z kluczem "paths"
+                if isinstance(data, dict) and "paths" in data:
+                    paths = data["paths"]
+                # 2. Jeśli plik zawiera listę ścieżek bezpośrednio
+                elif isinstance(data, list):
+                    paths = data
+                else:
+                    raise ValueError("Nieprawidłowy format pliku pickle")
+                
+                # Konwersja indeksów na liczby całkowite (jeśli są stringami)
+                converted_paths = []
+                for path in paths:
+                    if isinstance(path[0], str):
+                        converted_paths.append([int(index) for index in path])
+                    else:
+                        converted_paths.append(path)
+                
+                return converted_paths
+                
+        except Exception as e:
+            print(f"Błąd podczas odczytu pliku {filename}: {e}")
+            return []
+        
+    def display_paths_in_separate_windows(self, paths):
+        """
+        Wyświetla każdą ścieżkę w osobnym oknie Pygame.
+        
+        Args:
+            paths (list): Lista ścieżek (tras)
+        """
+        for i, path in enumerate(paths):
+            # Tworzymy nowe okno dla każdej ścieżki
+            window = pygame.display.set_mode((WIDTH, HEIGHT))
+            pygame.display.set_caption(f"Ścieżka {i + 1}")
+            
+            # Rysujemy punkty i połączenia
+            window.fill(WHITE)
+            self.draw_connections(window)
+            self.draw_points(window)
+            
+            # Podświetlamy ścieżkę
+            for j in range(len(path) - 1):
+                # Konwertujemy indeksy na liczby całkowite
+                start_index = int(path[j])
+                end_index = int(path[j + 1])
+                start_point = self.points[start_index]
+                end_point = self.points[end_index]
+                pygame.draw.line(window, RED, start_point.get_position(), end_point.get_position(), 4)
+            
+            pygame.display.flip()
+            
+            # Czekamy na zamknięcie okna
+            waiting = True
+            while waiting:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        waiting = False
+            pygame.display.quit()
 
     def run(self):
         """Główna pętla gry."""
@@ -364,10 +442,22 @@ class Game:
             self.draw_points(screen)
             pygame.display.flip()
 
+        # Po zamknięciu głównego okna, wyświetlamy ścieżki z pliku pickle
+        paths = self.load_paths_from_pickle()
+        self.display_paths_in_separate_windows(paths)
+
         pygame.quit()
+
 
 if __name__ == '__main__':
     game = Game()
     # Wypisujemy do terminala wszystkie dane o punktach, sąsiadach i trasach
     game.print_points_and_routes()
     game.run()
+
+    with open('obiekty.pkl', 'wb') as plik:  # 'wb' oznacza zapis binarny
+        pickle.dump(game.points, plik)
+
+    with open('polaczenia.pkl', 'wb') as plik:  # 'wb' oznacza zapis binarny
+        pickle.dump(game.connections, plik)
+
